@@ -1,6 +1,8 @@
 // aggregator.js
 import { parentPort } from "worker_threads";
 
+const results = [];
+
 // Function to aggregate results from multiple workers
 function aggregateResults(workerResults) {
   let aggregatedResults = [];
@@ -12,7 +14,9 @@ function aggregateResults(workerResults) {
 
 // Listen for messages from worker threads
 parentPort.on("message", (message) => {
-  console.log("links", message);
+  console.log("AGGREGATOR");
+  results.push(message.links);
+  if (message.pages === results.length) parentPort.postMessage(results);
 
   // const { workerResults } = message;
   // const aggregatedResults = aggregateResults(workerResults);

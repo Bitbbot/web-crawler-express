@@ -12,8 +12,7 @@ app.get("/api/v1/sponsored-links", async (req, res) => {
     const keywordList = keywords.split(",");
     const totalPages = parseInt(pages);
 
-    let workerResults = [];
-    // const aggregator = new Worker("./aggregator.js");
+    const aggregator = new Worker("./aggregator.js");
 
     for (let i = 0; i <= totalPages; i++) {
       for (const keyword of keywordList) {
@@ -22,14 +21,10 @@ app.get("/api/v1/sponsored-links", async (req, res) => {
 
         worker.postMessage({ keyword, pageNumber: i });
 
-        // worker.on("message", (links) => {
-        //   console.log("links", links);
-        // //   workerResults.push(links);
-        // //   if (workerResults.length === keywordList.length * (totalPages + 1)) {
-        // //     // Once all workers have finished, aggregate the results
-        // //     // aggregateResults(workerResults, res);
-        // //   }
-        // });
+        worker.on("message", (links) => {
+          console.log("links", links);
+          aggregator.postMessage({ links, pages: (totalPages + 1) * keywordList.length });
+        });
       }
     }
   } catch (error) {

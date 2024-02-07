@@ -9,7 +9,7 @@ parentPort.on("message", async (workerData) => {
     const page = await browser.newPage();
     await page.goto(`https://www.google.com/search?q=${encodeURIComponent(keyword)}&start=${pageNumber}`);
 
-    await page.screenshot({ path: `${pageNumber}full.png`, fullPage: true });
+    // await page.screenshot({ path: `${pageNumber}full.png`, fullPage: true });
     const sponsoredLinks = await page.evaluate(() => {
       const links = Array.from(document.querySelectorAll(`div[id="tads"]`))
         .map((div) => Array.from(div.querySelectorAll("a")))
@@ -24,7 +24,7 @@ parentPort.on("message", async (workerData) => {
 
     await browser.close();
 
-    aggregator.postMessage({ workerResults: sponsoredLinks });
+    parentPort.postMessage({ workerResults: sponsoredLinks });
     // parentPort.postMessage(sponsoredLinks);
   } catch (error) {
     console.error(`Error crawling sponsored links for keyword "${keyword}" and page ${pageNumber}:`, error);
