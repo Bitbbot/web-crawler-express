@@ -39,14 +39,16 @@ parentPort.on("message", async (workerData) => {
 
 async function getLinks(page, selectors) {
   return page.evaluate(function (selectors) {
-    const linkst = Array.from(document.querySelectorAll(selectors[0]))
-      .map((div) => Array.from(div.querySelectorAll("a")))
-      .flat()
-      .map((link) => link.getAttribute("href"));
-    const linksb = Array.from(document.querySelectorAll(selectors[1]))
-      .map((div) => Array.from(div.querySelectorAll("a")))
-      .flat()
-      .map((link) => link.getAttribute("href"));
-    return [...linkst, ...linksb];
+    let allLinks = [];
+
+    selectors.forEach((selector) => {
+      const elements = Array.from(document.querySelectorAll(selector));
+      const links = elements.flatMap((div) =>
+        Array.from(div.querySelectorAll("a")).map((link) => link.getAttribute("href")),
+      );
+      allLinks = allLinks.concat(links);
+    });
+
+    return allLinks;
   }, selectors);
 }
