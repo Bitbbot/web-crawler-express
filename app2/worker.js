@@ -9,18 +9,7 @@ parentPort.on("message", async (workerData) => {
     const page = await browser.newPage();
     if (searchEngine === "google") {
       await page.goto(`https://www.google.com/search?q=${encodeURIComponent(keyword)}&start=${pageNumber}`);
-
-      sponsoredLinks = await page.evaluate(() => {
-        const linkst = Array.from(document.querySelectorAll(`div[id="tads"]`))
-          .map((div) => Array.from(div.querySelectorAll("a")))
-          .flat()
-          .map((link) => link.getAttribute("href"));
-        const linksb = Array.from(document.querySelectorAll(`div[id="tadsb"]`))
-          .map((div) => Array.from(div.querySelectorAll("a")))
-          .flat()
-          .map((link) => link.getAttribute("href"));
-        return [...linkst, ...linksb];
-      });
+      sponsoredLinks = await getLinks(page, [`div[id="tads"]`, `div[id="tadsb"]`]);
     } else if (searchEngine === "yahoo") {
       await page.goto(`https://search.yahoo.com/search?p=${encodeURIComponent(keyword)}&b=${pageNumber * 7 + 1}&pz=7`);
       try {
@@ -29,40 +18,17 @@ parentPort.on("message", async (workerData) => {
           if (button) {
             button.click();
           } else {
-            console.error("Button not found");
+            console.error("Yahoo: button not found");
           }
         });
         await page.waitForNavigation();
       } catch (e) {}
-      await page.screenshot({ path: `${Math.random()}.png`, fullPage: true });
-      sponsoredLinks = await page.evaluate(() => {
-        const linkst = Array.from(document.querySelectorAll('ol[class*="searchCenterTopAds"]'))
-          .map((div) => Array.from(div.querySelectorAll("a")))
-          .flat()
-          .map((link) => link.getAttribute("href"));
-        const linksb = Array.from(document.querySelectorAll('ol[class*="searchCenterBottomAds"]'))
-          .map((div) => Array.from(div.querySelectorAll("a")))
-          .flat()
-          .map((link) => link.getAttribute("href"));
-        return [...linkst, ...linksb];
-      });
+      sponsoredLinks = await getLinks(page, ['ol[class*="searchCenterTopAds"]', 'ol[class*="searchCenterBottomAds"]']);
     } else {
       await page.goto(`https://www.bing.com/search?q=${encodeURIComponent(keyword)}&first=${pageNumber * 10 + 1}`);
-
-      sponsoredLinks = await page.evaluate(() => {
-        const linkst = Array.from(document.querySelectorAll('li[class*="b_adTop"]'))
-          .map((div) => Array.from(div.querySelectorAll("a")))
-          .flat()
-          .map((link) => link.getAttribute("href"));
-        const linksb = Array.from(document.querySelectorAll('li[class*="b_adBottom"]'))
-          .map((div) => Array.from(div.querySelectorAll("a")))
-          .flat()
-          .map((link) => link.getAttribute("href"));
-        return [...linkst, ...linksb];
-      });
+      sponsoredLinks = await getLinks(page, ['li[class*="b_adTop"]', 'li[class*="b_adBottom"]']);
     }
 
-    console.log(sponsoredLinks);
     await browser.close();
     parentPort.postMessage({ keyword, sponsoredLinks });
   } catch (error) {
@@ -70,3 +36,17 @@ parentPort.on("message", async (workerData) => {
     parentPort.postMessage({ keyword, sponsoredLinks: [] });
   }
 });
+
+async function getLinks(page, selectors) {
+  return page.evaluate(function (selectors) {
+    const linkst = Array.from(document.querySelectorAll(selectors[0]))
+      .map((div) => Array.from(div.querySelectorAll("a")))
+      .flat()
+      .map((link) => link.getAttribute("href"));
+    const linksb = Array.from(document.querySelectorAll(selectors[1]))
+      .map((div) => Array.from(div.querySelectorAll("a")))
+      .flat()
+      .map((link) => link.getAttribute("href"));
+    return [...linkst, ...linksb];
+  }, selectors);
+}
