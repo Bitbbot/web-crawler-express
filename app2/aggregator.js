@@ -1,25 +1,28 @@
-// aggregator.js
-import { parentPort } from "worker_threads";
+import { parentPort, workerData } from "worker_threads";
 
+const { resultsCount } = workerData;
+let aggregatedNumber = 0;
 const results = [];
 
-// Function to aggregate results from multiple workers
-function aggregateResults(workerResults) {
-  let aggregatedResults = [];
-  for (const result of workerResults) {
-    aggregatedResults = aggregatedResults.concat(result);
-  }
-  return aggregatedResults;
+function mergeArray(array) {
+  return array.reduce((acc, curr) => {
+    const existingObjectIndex = acc.findIndex((obj) => obj.keyword === curr.keyword);
+
+    if (existingObjectIndex !== -1) {
+      acc[existingObjectIndex].sponsoredLinks.push(...curr.sponsoredLinks);
+    } else {
+      acc.push({ keyword: curr.keyword, sponsoredLinks: [...curr.sponsoredLinks] });
+    }
+
+    return acc;
+  }, []);
 }
 
-// Listen for messages from worker threads
-parentPort.on("message", (message) => {
-  console.log("AGGREGATOR");
-  results.push(message.links);
-  if (message.pages === results.length) parentPort.postMessage(results);
-
-  // const { workerResults } = message;
-  // const aggregatedResults = aggregateResults(workerResults);
-  // // Send aggregated results back to the main thread
-  // parentPort.postMessage(aggregatedResults);
+parentPort.on("message", (result) => {
+  aggregatedNumber++;
+  results.push(result);
+  if (aggregatedNumber === resultsCount) {
+    const newResults = mergeArray(results);
+    parentPort.postMessage(newResults);
+  }
 });

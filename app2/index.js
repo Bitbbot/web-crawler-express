@@ -6,24 +6,42 @@ const app = express();
 app.use(express.json());
 
 app.get("/api/v1/sponsored-links", async (req, res) => {
-  console.log("index");
   try {
     const { pages, keywords } = req.query;
     const keywordList = keywords.split(",");
     const totalPages = parseInt(pages);
 
-    const aggregator = new Worker("./aggregator.js");
+    const aggregator = new Worker("./aggregator.js", {
+      workerData: { resultsCount: totalPages * keywordList.length * 3 },
+    });
+    aggregator.on("message", (data) => {
+      res.json(data);
+    });
 
-    for (let i = 0; i <= totalPages; i++) {
+    for (let i = 0; i < totalPages; i++) {
       for (const keyword of keywordList) {
-        console.log("new worker");
-        const worker = new Worker("./worker.js", { keyword, pageNumber: i });
+        const workerGoogle = new Worker("./worker.js", { keyword, pageNumber: i, searchEngine: "google" });
+        workerGoogle.postMessage({ keyword, pageNumber: i, searchEngine: "google" });
 
-        worker.postMessage({ keyword, pageNumber: i });
+        workerGoogle.on("message", (result) => {
+          workerGoogle.terminate();
+          aggregator.postMessage(result);
+        });
 
-        worker.on("message", (links) => {
-          console.log("links", links);
-          aggregator.postMessage({ links, pages: (totalPages + 1) * keywordList.length });
+        const workerYahoo = new Worker("./worker.js", { keyword, pageNumber: i, searchEngine: "yahoo" });
+        workerYahoo.postMessage({ keyword, pageNumber: i, searchEngine: "yahoo" });
+
+        workerYahoo.on("message", (result) => {
+          workerYahoo.terminate();
+          aggregator.postMessage(result);
+        });
+
+        const workerBing = new Worker("./worker.js", { keyword, pageNumber: i, searchEngine: "bing" });
+        workerBing.postMessage({ keyword, pageNumber: i, searchEngine: "bing" });
+
+        workerBing.on("message", (result) => {
+          workerBing.terminate();
+          aggregator.postMessage(result);
         });
       }
     }
@@ -32,18 +50,6 @@ app.get("/api/v1/sponsored-links", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
-// Function to aggregate results from worker threads
-// function aggregateResults(workerResults, res) {
-//   const aggregator = new Worker("./aggregator.js");
-
-//   aggregator.on("message", (aggregatedResults) => {
-//     res.json(aggregatedResults);
-//   });
-
-//   // Send results to the aggregator
-//   aggregator.postMessage({ workerResults });
-// }
 
 const start = async () => {
   try {
