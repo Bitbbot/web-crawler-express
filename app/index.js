@@ -1,4 +1,3 @@
-// index.js
 import express from "express";
 import { Worker } from "worker_threads";
 
@@ -13,7 +12,7 @@ app.get("/api/v1/sponsored-links", async (req, res) => {
     const keywordList = keywords.split(",");
     const totalPages = parseInt(pages);
 
-    const aggregator = new Worker("./aggregator.js", {
+    const aggregator = new Worker("./app/aggregator.js", {
       workerData: { resultsCount: totalPages * keywordList.length * searchEngines.length },
     });
     aggregator.on("message", (data) => {
@@ -23,7 +22,7 @@ app.get("/api/v1/sponsored-links", async (req, res) => {
     for (let i = 0; i < totalPages; i++) {
       for (const keyword of keywordList) {
         for (const engine of searchEngines) {
-          const worker = new Worker("./worker.js", { keyword, pageNumber: i, searchEngine: engine });
+          const worker = new Worker("./app/worker.js", { keyword, pageNumber: i, searchEngine: engine });
           worker.postMessage({ keyword, pageNumber: i, searchEngine: engine });
 
           worker.on("message", (result) => {
