@@ -2,6 +2,8 @@
 import express from "express";
 import { Worker } from "worker_threads";
 
+const searchEngines = ["google", "yahoo", "bing"];
+
 const app = express();
 app.use(express.json());
 
@@ -12,7 +14,7 @@ app.get("/api/v1/sponsored-links", async (req, res) => {
     const totalPages = parseInt(pages);
 
     const aggregator = new Worker("./aggregator.js", {
-      workerData: { resultsCount: totalPages * keywordList.length * 3 },
+      workerData: { resultsCount: totalPages * keywordList.length * searchEngines.length },
     });
     aggregator.on("message", (data) => {
       res.json(data);
@@ -20,29 +22,15 @@ app.get("/api/v1/sponsored-links", async (req, res) => {
 
     for (let i = 0; i < totalPages; i++) {
       for (const keyword of keywordList) {
-        const workerGoogle = new Worker("./worker.js", { keyword, pageNumber: i, searchEngine: "google" });
-        workerGoogle.postMessage({ keyword, pageNumber: i, searchEngine: "google" });
+        for (const engine of searchEngines) {
+          const worker = new Worker("./worker.js", { keyword, pageNumber: i, searchEngine: engine });
+          worker.postMessage({ keyword, pageNumber: i, searchEngine: engine });
 
-        workerGoogle.on("message", (result) => {
-          workerGoogle.terminate();
-          aggregator.postMessage(result);
-        });
-
-        const workerYahoo = new Worker("./worker.js", { keyword, pageNumber: i, searchEngine: "yahoo" });
-        workerYahoo.postMessage({ keyword, pageNumber: i, searchEngine: "yahoo" });
-
-        workerYahoo.on("message", (result) => {
-          workerYahoo.terminate();
-          aggregator.postMessage(result);
-        });
-
-        const workerBing = new Worker("./worker.js", { keyword, pageNumber: i, searchEngine: "bing" });
-        workerBing.postMessage({ keyword, pageNumber: i, searchEngine: "bing" });
-
-        workerBing.on("message", (result) => {
-          workerBing.terminate();
-          aggregator.postMessage(result);
-        });
+          worker.on("message", (result) => {
+            worker.terminate();
+            aggregator.postMessage(result);
+          });
+        }
       }
     }
   } catch (error) {

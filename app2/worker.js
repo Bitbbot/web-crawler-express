@@ -24,7 +24,7 @@ parentPort.on("message", async (workerData) => {
         await page.waitForNavigation();
       } catch (e) {}
       sponsoredLinks = await getLinks(page, ['ol[class*="searchCenterTopAds"]', 'ol[class*="searchCenterBottomAds"]']);
-    } else {
+    } else if (searchEngine === "bing") {
       await page.goto(`https://www.bing.com/search?q=${encodeURIComponent(keyword)}&first=${pageNumber * 10 + 1}`);
       sponsoredLinks = await getLinks(page, ['li[class*="b_adTop"]', 'li[class*="b_adBottom"]']);
     }

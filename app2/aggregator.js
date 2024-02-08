@@ -11,7 +11,10 @@ function mergeArray(array) {
     if (existingObjectIndex !== -1) {
       acc[existingObjectIndex].sponsoredLinks.push(...curr.sponsoredLinks);
     } else {
-      acc.push({ keyword: curr.keyword, sponsoredLinks: [...curr.sponsoredLinks] });
+      acc.push({
+        keyword: curr.keyword,
+        sponsoredLinks: [...curr.sponsoredLinks.filter((str) => str.startsWith("http"))],
+      });
     }
 
     return acc;
