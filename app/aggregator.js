@@ -7,17 +7,20 @@ const results = [];
 function mergeArray(array) {
   return array.reduce((acc, curr) => {
     const existingObjectIndex = acc.findIndex((obj) => obj.keyword === curr.keyword);
+    try {
+      if (existingObjectIndex !== -1) {
+        acc[existingObjectIndex].sponsoredLinks.push(...curr.sponsoredLinks.filter((str) => str.startsWith("http")));
+      } else {
+        acc.push({
+          keyword: curr.keyword,
+          sponsoredLinks: [...curr.sponsoredLinks.filter((str) => str.startsWith("http"))],
+        });
+      }
 
-    if (existingObjectIndex !== -1) {
-      acc[existingObjectIndex].sponsoredLinks.push(...curr.sponsoredLinks);
-    } else {
-      acc.push({
-        keyword: curr.keyword,
-        sponsoredLinks: [...curr.sponsoredLinks.filter((str) => str.startsWith("http"))],
-      });
+      return acc;
+    } catch (e) {
+      return e;
     }
-
-    return acc;
   }, []);
 }
 
