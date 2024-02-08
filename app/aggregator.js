@@ -19,7 +19,8 @@ function mergeArray(array) {
 
       return acc;
     } catch (e) {
-      return e;
+      console.error(e);
+      return acc;
     }
   }, []);
 }
